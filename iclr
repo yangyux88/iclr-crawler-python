@@ -1,0 +1,52 @@
+from bs4 import BeautifulSoup
+import requests
+import mysql.connector
+import os
+import time
+mydb = mysql.connector.connect(
+    host="********",
+    user="********",
+    password="********",
+    database="ai4cyber_ailandscape",
+    auth_plugin='mysql_native_password')
+
+
+html = requests.get('https://www.paperdigest.org/2021/01/iclr-2021-highlights/')
+soup = BeautifulSoup(html.content,'html.parser')
+
+hrefs = soup.find_all('a',href = True)
+
+paper_keyword = 'openreview.net'
+
+article_link = []
+
+for tag in hrefs: 
+    link = tag.attrs.get('href')
+    if paper_keyword in link:
+        article_link.append(link)
+        
+article_link 
+for i in range(0,860):
+    url = article_link[i]
+    html = requests.get(url)
+    data = []
+    soup = BeautifulSoup(html.content,'html.parser')
+    Author = soup.select(".author")[0].text.strip("")
+    for item in soup.find_all("div",class_="note"):
+        Theme = item.find_all("h2")[0].text
+        Date = item.find_all("span")[0].text
+        data.append(Author)
+        data.append(Theme)
+        data.append(Date)
+        mycursor = mydb.cursor()
+        sql = "INSERT INTO iclr (author, theme, date) VALUES (%s, %s, %s)"
+        val = (Author,Theme,Date)
+        try:
+            mycursor.execute(sql, val)
+            mydb.commit()
+            print(mycursor.rowcount, "record inserted.")
+        except (mysql.connector.errors.IntegrityError, mysql.connector.errors.DatabaseError):
+            print("Unable to insert record, continuing...")
+            
+
+        print(data) 
